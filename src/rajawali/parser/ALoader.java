@@ -12,153 +12,157 @@
  */
 package rajawali.parser;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.Locale;
 
-import rajawali.renderer.RajawaliRenderer;
-import rajawali.util.LittleEndianDataInputStream;
 import rajawali.util.RajLog;
+import android.content.res.AssetManager;
 import android.content.res.Resources;
 import android.os.Environment;
 
 public abstract class ALoader implements ILoader {
 
-	protected Resources mResources;
-	protected int mResourceId;
-	protected String mFileOnSDCard;
-	protected File mFile;
+	public static enum Type {
+		RAW, SDCARD, ASSETS
+	}
 
+	private Type mType;
+
+	// raw
+	private Resources mResources = null;
+	private int mResourceId = 0;
+	// sdcard
+	private String mFileOnSDCard = null;
+	private File mFile = null;
+	// assets
+	private String mAssetFileName = null;
+	private AssetManager mAssets = null;
+
+	// abstract methods ---------------------------------------------
+	protected abstract void parse(InputStream is) throws ParsingException;
+
+	// ~abstract methods --------------------------------------------
+
+	// constructors -------------------------------------------------
 	public ALoader(File file) {
 		this(file.getAbsolutePath());
-		mFile = file;
+		this.mFile = file;
 	}
 
-	public ALoader(String fileOnSDCard)
-	{
-		mResources = null;
-		mResourceId = 0;
-		mFileOnSDCard = fileOnSDCard;
+	public ALoader(String fileOnSDCard) {
+		this.mFileOnSDCard = fileOnSDCard;
+		this.mType = Type.SDCARD;
 	}
 
-	public ALoader(RajawaliRenderer renderer, String fileOnSDCard)
-	{
-		this(renderer.getContext().getResources(), 0);
-		mFileOnSDCard = fileOnSDCard;
+	public ALoader(AssetManager assets, String filename) {
+		this.mAssets = assets;
+		this.mAssetFileName = filename;
+		this.mType = Type.ASSETS;
 	}
 
-	public ALoader(RajawaliRenderer renderer, int resourceId)
-	{
-		this(renderer.getContext().getResources(), resourceId);
+	public ALoader(Resources resources, int resourceId) {
+		this.mResources = resources;
+		this.mResourceId = resourceId;
+		this.mType = Type.RAW;
 	}
 
-	public ALoader(Resources resources, int resourceId)
-	{
-		mResources = resources;
-		mResourceId = resourceId;
+	// ~constructors ------------------------------------------------
+	// getter/setter ------------------------------------------------
+	public void setResources(Resources resources) {
+		this.mResources = resources;
 	}
 
-	public ALoader(RajawaliRenderer renderer, File file) {
-		this(renderer.getContext().getResources(), 0);
-		mFile = file;
+	public Type getType() {
+		return mType;
 	}
 
-	public ILoader parse() throws ParsingException {
-		if (mFile == null && mFileOnSDCard != null)
-			mFile = new File(Environment.getExternalStorageDirectory(), mFileOnSDCard);
+	public Resources getResources() {
+		return mResources;
+	}
 
-		if (mFile != null)
-			RajLog.d("Parsing: " + mFile.getAbsolutePath());
+	public int getResourceId() {
+		return mResourceId;
+	}
+
+	public AssetManager getAssets() {
+		return mAssets;
+	}
+
+	public String getFilepath() {
+		switch (mType) {
+		case ASSETS:
+			return mAssetFileName;
+		case SDCARD:
+			return mFileOnSDCard;
+		default:
+			return null;
+		}
+	}
+
+	public String getParentFolder() {
+		switch (mType) {
+		case ASSETS:
+			// TODO: getParent!!
+			return mAssetFileName;
+		case SDCARD:
+			if (mFile == null) {
+				mFile = new File(Environment.getExternalStorageDirectory(), mFileOnSDCard);
+			}
+			return mFile.getParent();
+		default:
+			return null;
+		}
+	}
+
+	// ~getter/setter -----------------------------------------------
+	public final ILoader parse() throws ParsingException {
+		InputStream is = null;
+		Throwable thr = null;
+
+		try {
+			is = getInputStream();
+			parse(is);
+		} catch (Exception e) {
+			RajLog.e("parse error", e);
+			thr = e;
+		} finally {
+			if (is != null) {
+				try {
+					is.close();
+					is = null;
+				} catch (Exception e) {}
+			}
+		}
+
+		if (thr != null) {
+			throw new ParsingException(thr);
+		}
 		return this;
 	}
 
-	/**
-	 * Open a BufferedReader for the current resource or file with a buffer size of 8192 bytes.
-	 * 
-	 * @return
-	 * @throws FileNotFoundException
-	 */
-	protected BufferedReader getBufferedReader() throws FileNotFoundException {
-		return getBufferedReader(8192);
-	}
-
-	/**
-	 * Open a BufferedReader for the current resource or file with a given buffer size.
-	 * 
-	 * @param size
-	 *            Size of buffer in number of bytes
-	 * @return
-	 * @throws FileNotFoundException
-	 */
-	protected BufferedReader getBufferedReader(int size) throws FileNotFoundException {
-		BufferedReader buffer = null;
-
-		if (mFile == null) {
-			buffer = new BufferedReader(new InputStreamReader(mResources.openRawResource(mResourceId)), size);
-		} else {
-			buffer = new BufferedReader(new FileReader(mFile), size);
+	public InputStream getInputStream() throws FileNotFoundException, IOException, ParsingException {
+		InputStream is = null;
+		switch (mType) {
+		case SDCARD:
+			if (mFile == null) {
+				mFile = new File(Environment.getExternalStorageDirectory(), mFileOnSDCard);
+			}
+			is = new FileInputStream(mFile);
+			break;
+		case RAW:
+			is = mResources.openRawResource(mResourceId);
+			break;
+		case ASSETS:
+			is = mAssets.open(mAssetFileName);
+			break;
+		default:
+			throw new ParsingException("unknown type");
 		}
-
-		return buffer;
-	}
-
-	/**
-	 * Open a BufferedReader for the current resource or file with a buffer size of 8192 bytes.
-	 * 
-	 * @return
-	 * @throws FileNotFoundException
-	 */
-	protected BufferedInputStream getBufferedInputStream() throws FileNotFoundException {
-		return getBufferedInputStream(8192);
-	}
-
-	/**
-	 * Open a BufferedReader for the current resource or file using the given buffer size.
-	 * 
-	 * @param size
-	 * @return
-	 * @throws FileNotFoundException
-	 */
-	protected BufferedInputStream getBufferedInputStream(int size) throws FileNotFoundException {
-		BufferedInputStream bis;
-
-		if (mFile == null) {
-			bis = new BufferedInputStream(mResources.openRawResource(mResourceId), size);
-		} else {
-			bis = new BufferedInputStream(new FileInputStream(mFile), size);
-		}
-
-		return bis;
-	}
-
-	/**
-	 * Open a DataInputStream for the current resource or file using Little Endian format with a buffer size of 8192
-	 * bytes.
-	 * 
-	 * @return
-	 * @throws FileNotFoundException
-	 */
-	protected LittleEndianDataInputStream getLittleEndianInputStream() throws FileNotFoundException {
-		return getLittleEndianInputStream(8192);
-	}
-
-	/**
-	 * Open a DataInputStream for the current resource or file using Little Endian format with a given buffer size.
-	 * 
-	 * @param size
-	 *            Size of buffer in number of bytes
-	 * @return
-	 * @throws FileNotFoundException
-	 */
-	protected LittleEndianDataInputStream getLittleEndianInputStream(int size) throws FileNotFoundException {
-		return new LittleEndianDataInputStream(getBufferedInputStream(size));
+		return is;
 	}
 
 	protected String readString(InputStream stream) throws IOException {

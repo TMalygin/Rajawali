@@ -12,7 +12,11 @@
  */
 package rajawali.parser;
 
+import rajawali.Object3D;
+
 public interface ILoader {
 
 	public ILoader parse() throws ParsingException;
+
+	public Object3D getParsedObject();
 }

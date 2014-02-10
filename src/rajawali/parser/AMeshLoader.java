@@ -16,44 +16,39 @@ import java.io.File;
 
 import rajawali.Object3D;
 import rajawali.materials.textures.TextureManager;
-import rajawali.renderer.RajawaliRenderer;
+import android.content.res.AssetManager;
 import android.content.res.Resources;
 
 public abstract class AMeshLoader extends ALoader implements IMeshLoader {
 
-	protected TextureManager mTextureManager;
+	private TextureManager mTextureManager;
 
-	protected Object3D mRootObject;
+	protected Object3D mRootObject = new Object3D();
 
+	// constructors -------------------------------------------------
 	public AMeshLoader(File file) {
 		super(file);
-		mRootObject = new Object3D();
 	}
 
 	public AMeshLoader(String fileOnSDCard) {
 		super(fileOnSDCard);
-		mRootObject = new Object3D();
 	}
 
-	public AMeshLoader(RajawaliRenderer renderer, String fileOnSDCard) {
-		super(renderer, fileOnSDCard);
-		mRootObject = new Object3D();
+	public AMeshLoader(AssetManager asset, String filepath) {
+		super(asset, filepath);
 	}
 
-	public AMeshLoader(Resources resources, TextureManager textureManager, int resourceId) {
+	public AMeshLoader(Resources resources, int resourceId) {
 		super(resources, resourceId);
-		mTextureManager = textureManager;
-		mRootObject = new Object3D();
 	}
 
-	public AMeshLoader(RajawaliRenderer renderer, File file) {
-		super(renderer, file);
-		mRootObject = new Object3D();
+	// ~constructors -------------------------------------------------
+	public void setTextureManager(TextureManager textureManager) {
+		this.mTextureManager = textureManager;
 	}
 
-	public AMeshLoader parse() throws ParsingException {
-		super.parse();
-		return this;
+	public TextureManager getTextureManager() {
+		return mTextureManager;
 	}
 
 	public Object3D getParsedObject() {

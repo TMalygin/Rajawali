@@ -39,6 +39,7 @@ import rajawali.parser.IAnimatedMeshLoader;
 import rajawali.parser.ParsingException;
 import rajawali.renderer.RajawaliRenderer;
 import rajawali.util.RajLog;
+import android.content.res.AssetManager;
 import android.content.res.Resources;
 import android.opengl.GLES20;
 
@@ -70,16 +71,16 @@ public class LoaderMD5Mesh extends AMeshLoader implements IAnimatedMeshLoader {
 	public double[] mBindPoseMatrix;
 	public double[][] mInverseBindPoseMatrix;
 
-	public LoaderMD5Mesh(RajawaliRenderer renderer, String fileOnSDCard) {
-		super(renderer, fileOnSDCard);
+	public LoaderMD5Mesh(String fileOnSDCard) {
+		super(fileOnSDCard);
 	}
 
-	public LoaderMD5Mesh(RajawaliRenderer renderer, int resourceId) {
-		this(renderer.getContext().getResources(), renderer.getTextureManager(), resourceId);
+	public LoaderMD5Mesh(Resources res, int resourceId) {
+		super(res, resourceId);
 	}
 
-	public LoaderMD5Mesh(Resources resources, TextureManager textureManager, int resourceId) {
-		super(resources, textureManager, resourceId);
+	public LoaderMD5Mesh(AssetManager assets, String fileOnAssets) {
+		super(assets, fileOnAssets);
 	}
 
 	public AAnimationObject3D getParsedAnimationObject() {
@@ -87,21 +88,9 @@ public class LoaderMD5Mesh extends AMeshLoader implements IAnimatedMeshLoader {
 	}
 
 	@Override
-	public LoaderMD5Mesh parse() throws ParsingException {
-		super.parse();
+	protected void parse(InputStream is) throws ParsingException {
 
-		BufferedReader buffer = null;
-		if (mFile == null) {
-			InputStream fileIn = mResources.openRawResource(mResourceId);
-			buffer = new BufferedReader(new InputStreamReader(fileIn));
-		} else {
-			try {
-				buffer = new BufferedReader(new FileReader(mFile));
-			} catch (FileNotFoundException e) {
-				RajLog.e("[" + getClass().getCanonicalName() + "] Could not find file.");
-				throw new ParsingException(e);
-			}
-		}
+		BufferedReader buffer = new BufferedReader(new InputStreamReader(is));
 		String line;
 
 		try {
@@ -146,7 +135,6 @@ public class LoaderMD5Mesh extends AMeshLoader implements IAnimatedMeshLoader {
 			mInverseBindPoseMatrix = null;
 		}
 
-		return this;
 	}
 
 	private void parseJoints(BufferedReader buffer) {
@@ -295,7 +283,7 @@ public class LoaderMD5Mesh extends AMeshLoader implements IAnimatedMeshLoader {
 					SkeletonJoint joint = mJoints[weight.jointIndex];
 
 					Vector3 rotPos = joint.getOrientation().multiply(weight.position);
-					//We don't clone here because nothing will be able to use the quaternion scratch before we do
+					// We don't clone here because nothing will be able to use the quaternion scratch before we do
 					Vector3 pos = Vector3.addAndCreate(joint.getPosition(), rotPos);
 					pos.multiply(weight.weightValue);
 					position.add(pos);
@@ -342,7 +330,8 @@ public class LoaderMD5Mesh extends AMeshLoader implements IAnimatedMeshLoader {
 				Vector3 v1 = new Vector3(mesh.vertices[index13], mesh.vertices[index13 + 1], mesh.vertices[index13 + 2]);
 				Vector3 v2 = new Vector3(mesh.vertices[index23], mesh.vertices[index23 + 1], mesh.vertices[index23 + 2]);
 
-				Vector3 normal = Vector3.crossAndCreate(Vector3.subtractAndCreate(v2, v0), Vector3.subtractAndCreate(v1, v0));
+				Vector3 normal = Vector3.crossAndCreate(Vector3.subtractAndCreate(v2, v0),
+						Vector3.subtractAndCreate(v1, v0));
 				normal.inverse();
 
 				mesh.boneVertices[index0].normal.add(normal);
@@ -373,8 +362,9 @@ public class LoaderMD5Mesh extends AMeshLoader implements IAnimatedMeshLoader {
 				for (int k = 0; k < vert.numWeights; ++k) {
 					BoneWeight weight = mesh.boneWeights[vert.weightIndex + k];
 					SkeletonJoint joint = mJoints[weight.jointIndex];
-					//We don't clone here because nothing will be able to use the quaternion scratch before we do
-					vert.normal.add(Vector3.scaleAndCreate(joint.getOrientation().multiply(normal), weight.weightValue));
+					// We don't clone here because nothing will be able to use the quaternion scratch before we do
+					vert.normal
+							.add(Vector3.scaleAndCreate(joint.getOrientation().multiply(normal), weight.weightValue));
 				}
 			}
 		}
@@ -442,8 +432,9 @@ public class LoaderMD5Mesh extends AMeshLoader implements IAnimatedMeshLoader {
 			if (!hasTexture) {
 				o.setColor(0xff000000 + (int) (Math.random() * 0xffffff));
 			} else {
-				int identifier = mResources.getIdentifier(mesh.textureName, "drawable",
-						mResources.getResourcePackageName(mResourceId));
+				// XXX: is it only for raw?
+				int identifier = getResources().getIdentifier(mesh.textureName, "drawable",
+						getResources().getResourcePackageName(getResourceId()));
 				if (identifier == 0) {
 					throw new ParsingException("Couldn't find texture " + mesh.textureName);
 				}
@@ -451,13 +442,14 @@ public class LoaderMD5Mesh extends AMeshLoader implements IAnimatedMeshLoader {
 				mat.addTexture(new Texture("md5tex" + i, identifier));
 			}
 			mRootObject.addChild(o);
-			
+
 			mesh.destroy();
 			mesh = null;
 		}
 	}
 
 	private class SkeletonMeshData {
+
 		public String textureName;
 		public int numVertices;
 		public int numTriangles;
@@ -471,7 +463,7 @@ public class LoaderMD5Mesh extends AMeshLoader implements IAnimatedMeshLoader {
 		public int[] indices;
 		public float[] textureCoordinates;
 		public float[] weights;
-		
+
 		public void destroy()
 		{
 			boneVertices = null;

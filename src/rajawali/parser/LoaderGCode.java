@@ -17,17 +17,17 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Stack;
 
 import rajawali.Object3D;
-import rajawali.materials.textures.TextureManager;
 import rajawali.math.vector.Vector3;
 import rajawali.parser.LoaderSTL.StlParseException;
 import rajawali.primitives.Line3D;
-import rajawali.renderer.RajawaliRenderer;
 import rajawali.util.RajLog;
+import android.content.res.AssetManager;
 import android.content.res.Resources;
 import android.content.res.Resources.NotFoundException;
 import android.graphics.Color;
@@ -460,18 +460,13 @@ public class LoaderGCode extends AMeshLoader {
 		init();
 	}
 
-	public LoaderGCode(RajawaliRenderer renderer, File file) {
-		super(renderer, file);
+	public LoaderGCode(AssetManager assets, String fileOnassets) {
+		super(assets, fileOnassets);
 		init();
 	}
 
-	public LoaderGCode(RajawaliRenderer renderer, String fileOnSDCard) {
-		super(renderer, fileOnSDCard);
-		init();
-	}
-
-	public LoaderGCode(Resources resources, TextureManager textureManager, int resourceId) {
-		super(resources, textureManager, resourceId);
+	public LoaderGCode(Resources resources, int resourceId) {
+		super(resources, resourceId);
 		init();
 	}
 
@@ -515,12 +510,10 @@ public class LoaderGCode extends AMeshLoader {
 	 * @see rajawali.parser.AMeshLoader#parse()
 	 */
 	@Override
-	public AMeshLoader parse() throws ParsingException {
-		super.parse();
+	protected void parse(InputStream is) throws ParsingException {
 		try {
 			// Open the file
-			BufferedInputStream buffer = null;
-			buffer = getBufferedInputStream();
+			BufferedInputStream buffer = new BufferedInputStream(is, 512);
 			GCodeFlavor type = tasteFlavor(buffer);
 			switch (type) {
 			case SLIC3R:
@@ -554,18 +547,6 @@ public class LoaderGCode extends AMeshLoader {
 			throw new ParsingException("Unexpected exception occured.", e);
 		}
 
-		return this;
-	}
-
-	/**
-	 * Open a BufferedReader for the current resource or file with a buffer size of 8192 bytes.
-	 * 
-	 * @return
-	 * @throws FileNotFoundException
-	 */
-	@Override
-	protected BufferedInputStream getBufferedInputStream() throws FileNotFoundException {
-		return super.getBufferedInputStream(512);
 	}
 
 	/**

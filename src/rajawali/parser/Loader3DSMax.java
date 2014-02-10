@@ -14,7 +14,6 @@ package rajawali.parser;
 
 import java.io.BufferedInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -24,8 +23,9 @@ import rajawali.materials.Material;
 import rajawali.materials.methods.DiffuseMethod;
 import rajawali.materials.textures.ATexture.TextureException;
 import rajawali.math.vector.Vector3;
-import rajawali.renderer.RajawaliRenderer;
 import rajawali.util.RajLog;
+import android.content.res.AssetManager;
+import android.content.res.Resources;
 
 /**
  * 3DS object parser. This is a work in progress. Materials aren't parsed yet.
@@ -61,34 +61,32 @@ public class Loader3DSMax extends AMeshLoader {
 	private boolean mEndReached = false;
 	private int mObjects = -1;
 
-	public Loader3DSMax(RajawaliRenderer renderer, int resourceID) {
-		super(renderer.getContext().getResources(), renderer.getTextureManager(), resourceID);
+	public Loader3DSMax(AssetManager assets, String fileOnAssets) {
+		super(assets, fileOnAssets);
 	}
 
-	public Loader3DSMax(RajawaliRenderer renderer, File file) {
-		super(renderer, file);
+	public Loader3DSMax(Resources res, int resourceID) {
+		super(res, resourceID);
+	}
+
+	public Loader3DSMax(String fileOnSdcard) {
+		super(fileOnSdcard);
+	}
+
+	public Loader3DSMax(File file) {
+		super(file);
 	}
 
 	@Override
-	public AMeshLoader parse() throws ParsingException {
+	protected void parse(InputStream is) throws ParsingException {
 		RajLog.i("Start parsing 3DS");
 
-		final InputStream stream;
-		if (mFile == null) {
-			stream = new BufferedInputStream(mResources.openRawResource(mResourceId));
-		} else {
-			try {
-				stream = new BufferedInputStream(new FileInputStream(mFile));
-			} catch (Exception e) {
-				throw new ParsingException(e);
-			}
-		}
+		final BufferedInputStream stream = new BufferedInputStream(is);
 
 		try {
 			readHeader(stream);
 			if (mChunkID != IDENTIFIER_3DS) {
-				RajLog.e("Not a valid 3DS file");
-				return null;
+				throw new ParsingException("Not a valid 3DS file");
 			}
 
 			while (!mEndReached) {
@@ -97,7 +95,7 @@ public class Loader3DSMax extends AMeshLoader {
 
 			try {
 				build();
-			} catch(TextureException tme) {
+			} catch (TextureException tme) {
 				throw new ParsingException(tme);
 			}
 			if (mRootObject.getNumChildren() == 1)
@@ -111,7 +109,6 @@ public class Loader3DSMax extends AMeshLoader {
 			throw new ParsingException(e);
 		}
 
-		return this;
 	}
 
 	void readChunk(InputStream stream) throws IOException {

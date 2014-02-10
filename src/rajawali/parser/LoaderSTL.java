@@ -17,13 +17,14 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
-import rajawali.renderer.RajawaliRenderer;
 import rajawali.util.LittleEndianDataInputStream;
 import rajawali.util.RajLog;
+import android.content.res.AssetManager;
 import android.content.res.Resources;
 import android.content.res.Resources.NotFoundException;
 
@@ -48,58 +49,66 @@ public class LoaderSTL extends AMeshLoader {
 		BINARY
 	}
 
-	public LoaderSTL(RajawaliRenderer renderer, String fileOnSDCard) {
-		super(renderer, fileOnSDCard);
+	private StlType mType = StlType.UNKNOWN;
+
+	public LoaderSTL(String fileOnSDCard) {
+		super(fileOnSDCard);
 	}
 
-	public LoaderSTL() {
-		super(null, "");
+	public LoaderSTL(File file) {
+		super(file);
 	}
 
 	public LoaderSTL(Resources resources, int resourceId) {
-		super(resources, null, resourceId);
+		super(resources, resourceId);
 	}
 
-	public LoaderSTL(RajawaliRenderer renderer, File file) {
-		super(renderer, file);
+	public LoaderSTL(AssetManager assets, String filepath) {
+		super(assets, filepath);
 	}
 
 	@Override
-	public AMeshLoader parse() throws ParsingException {
-		return parse(StlType.UNKNOWN);
+	public void parse(InputStream is) throws ParsingException {
+		parse(is, mType);
 	}
 
-	public AMeshLoader parse(StlType type) throws ParsingException {
-		super.parse();
+	public void setType(StlType type) {
+		this.mType = type;
+	}
+
+	protected ILoader parse(StlType type) throws ParsingException {
+		mType = type;
+		return super.parse();
+	}
+
+	public AMeshLoader parse(InputStream is, StlType type) throws ParsingException {
 		try {
 
 			// Open the file
-			BufferedReader buffer = null;
 			LittleEndianDataInputStream dis = null;
-
+			final BufferedReader buffer = new BufferedReader(new InputStreamReader(is));
 			switch (type) {
 			case UNKNOWN:
-				buffer = getBufferedReader();
 				// Determine if ASCII or Binary
 				boolean isASCII = isASCII(buffer);
 
 				// Determine ASCII or Binary format
 				if (isASCII) {
 					readASCII(buffer);
+					type = StlType.ASCII;
 				} else {
-
+					type = StlType.BINARY;
 					// Switch to a LittleEndianDataInputStream (all values in binary are stored in little endian format)
-					buffer.close();
-					dis = getLittleEndianInputStream();
+					is.close();
+					dis = new LittleEndianDataInputStream(getInputStream());
 					readBinary(dis);
 				}
 				break;
 			case ASCII:
-				buffer = getBufferedReader();
 				readASCII(buffer);
 				break;
 			case BINARY:
-				dis = getLittleEndianInputStream();
+				dis = new LittleEndianDataInputStream(is);
 				readBinary(dis);
 				break;
 			}

@@ -77,6 +77,10 @@ public class RajLog {
 		Log.e(TAG, msg);
 	}
 	
+	public static final void e(String msg, Throwable thr) {
+		Log.e(TAG, msg, thr);
+	}
+	
 	public static final void enableDebug(boolean flag) {
 		_logDebug = flag;
 	}

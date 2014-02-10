@@ -34,6 +34,7 @@ import rajawali.materials.textures.TextureManager;
 import rajawali.renderer.RajawaliRenderer;
 import rajawali.util.LittleEndianDataInputStream;
 import rajawali.util.RajLog;
+import android.content.res.AssetManager;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -49,40 +50,24 @@ public class LoaderMD2 extends AMeshLoader implements IAnimatedMeshLoader {
 	private int[] mIndices;
 	private float[] mTextureCoords;
 
-	public LoaderMD2(RajawaliRenderer renderer, String fileOnSDCard) {
-		super(renderer, fileOnSDCard);
+	public LoaderMD2(String fileOnSDCard) {
+		super(fileOnSDCard);
 	}
 
-	public LoaderMD2(RajawaliRenderer renderer, int resourceId) {
-		this(renderer.getContext().getResources(), renderer.getTextureManager(), resourceId);
+	public LoaderMD2(Resources res, int resourceId) {
+		super(res, resourceId);
 	}
 
-	public LoaderMD2(Resources resources, TextureManager textureManager, int resourceId) {
-		super(resources, textureManager, resourceId);
-	}
-	
-	public LoaderMD2(RajawaliRenderer renderer, File file) {
-		super(renderer, file);
+	public LoaderMD2(AssetManager assets, String fileOnSdcard) {
+		super(assets, fileOnSdcard);
 	}
 
 	public AAnimationObject3D getParsedAnimationObject() {
 		return (AAnimationObject3D) mRootObject;
 	}
 
-	public LoaderMD2 parse() throws ParsingException {
-		super.parse();
-		BufferedInputStream stream = null;
-		if (mFile == null) {
-			InputStream fileIn = mResources.openRawResource(mResourceId);
-			stream = new BufferedInputStream(fileIn);
-		} else {
-			try {
-				stream = new BufferedInputStream(new FileInputStream(mFile));
-			} catch (FileNotFoundException e) {
-				RajLog.e("[" + getClass().getCanonicalName() + "] Could not find file.");
-				throw new ParsingException(e);
-			}
-		}
+	protected void parse(InputStream is) throws ParsingException {
+		BufferedInputStream stream = new BufferedInputStream(is);
 
 		mObject = new VertexAnimationObject3D();
 		mObject.setFps(10);
@@ -117,7 +102,7 @@ public class LoaderMD2 extends AMeshLoader implements IAnimatedMeshLoader {
 			mObject.setData(firstFrame.getGeometry().getVertexBufferInfo(), firstFrame.getGeometry()
 					.getNormalBufferInfo(), mTextureCoords, null, mIndices);
 			mObject.setMaterial(material);
-			
+
 			mObject.setColor(0xffffffff);
 			if (mTexture != null)
 			{
@@ -130,16 +115,15 @@ public class LoaderMD2 extends AMeshLoader implements IAnimatedMeshLoader {
 		}
 		mObject.isContainer(false);
 		mRootObject = mObject;
-
-		return this;
 	}
 
 	private void getMaterials(BufferedInputStream stream, byte[] bytes)
-			throws IOException {
+			throws IOException, ParsingException {
 		ByteArrayInputStream ba = new ByteArrayInputStream(bytes,
 				mHeader.offsetSkins - 68, bytes.length - mHeader.offsetSkins);
 		LittleEndianDataInputStream is = new LittleEndianDataInputStream(ba);
 
+		Type type = getType();
 		for (int i = 0; i < mHeader.numSkins; i++) {
 			String skinPath = is.readString(64);
 
@@ -147,7 +131,7 @@ public class LoaderMD2 extends AMeshLoader implements IAnimatedMeshLoader {
 					skinPath.length());
 			StringBuffer textureName = new StringBuffer(skinPath.toLowerCase(Locale.ENGLISH));
 			mCurrentTextureName = textureName.toString().trim();
-			if (mFile != null)
+			if (type != Type.RAW)
 				continue;
 			int dotIndex = textureName.lastIndexOf(".");
 			if (dotIndex > -1)
@@ -156,24 +140,36 @@ public class LoaderMD2 extends AMeshLoader implements IAnimatedMeshLoader {
 			mCurrentTextureName = textureName.toString();
 		}
 		is.close();
-		if (mFile == null) {
+
+		switch (type) {
+		case RAW:
 			if (mCurrentTextureName == null) {
 				RajLog.e("[" + getClass().getCanonicalName()
 						+ "] No texture name was specified. No material will be created.");
 				return;
 			}
-			int identifier = mResources.getIdentifier(mCurrentTextureName, "drawable",
-					mResources.getResourcePackageName(mResourceId));
-			mTexture = BitmapFactory.decodeResource(mResources, identifier);
-		} else {
+			int identifier = getResources().getIdentifier(mCurrentTextureName, "drawable",
+					getResources().getResourcePackageName(getResourceId()));
+			mTexture = BitmapFactory.decodeResource(getResources(), identifier);
+			break;
+		case ASSETS:
 			try {
-				String filePath = mFile.getParent() + File.separatorChar + mCurrentTextureName;
+				String filePath = getParentFolder() + File.separatorChar + mCurrentTextureName;
+				mTexture = BitmapFactory.decodeStream(getAssets().open(filePath));
+			} catch (Exception e) {
+				throw new ParsingException("[" + getClass().getCanonicalName() + "] Could not find file "
+						+ mCurrentTextureName);
+			}
+			break;
+		case SDCARD:
+			try {
+				String filePath = getParentFolder() + File.separatorChar + mCurrentTextureName;
 				mTexture = BitmapFactory.decodeFile(filePath);
 			} catch (Exception e) {
-				RajLog.e("[" + getClass().getCanonicalName() + "] Could not find file " + mCurrentTextureName);
-				e.printStackTrace();
-				return;
+				throw new ParsingException("[" + getClass().getCanonicalName() + "] Could not find file "
+						+ mCurrentTextureName);
 			}
+			break;
 		}
 	}
 

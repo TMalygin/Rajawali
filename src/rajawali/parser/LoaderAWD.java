@@ -1,7 +1,7 @@
 package rajawali.parser;
 
+import java.io.BufferedInputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -9,7 +9,6 @@ import java.util.HashMap;
 import java.util.List;
 
 import rajawali.Object3D;
-import rajawali.materials.textures.TextureManager;
 import rajawali.parser.awd.ABlockParser;
 import rajawali.parser.awd.AExportableBlockParser;
 import rajawali.parser.awd.BlockAnimationSet;
@@ -39,10 +38,10 @@ import rajawali.parser.awd.BlockTextureProjector;
 import rajawali.parser.awd.BlockTriangleGeometry;
 import rajawali.parser.awd.BlockUVAnimation;
 import rajawali.parser.awd.exceptions.NotImplementedParsingException;
-import rajawali.renderer.RajawaliRenderer;
 import rajawali.scene.RajawaliScene;
 import rajawali.util.LittleEndianDataInputStream;
 import rajawali.util.RajLog;
+import android.content.res.AssetManager;
 import android.content.res.Resources;
 import android.os.SystemClock;
 import android.util.SparseArray;
@@ -108,19 +107,23 @@ public class LoaderAWD extends AMeshLoader {
 	protected boolean awdHeaderAccuracyProps;
 	protected boolean mAlwaysUseContainer;
 
-	public LoaderAWD(RajawaliRenderer renderer, File file) {
-		super(renderer, file);
+	public LoaderAWD(File file) {
+		super(file);
 		init();
 	}
 
-	public LoaderAWD(Resources resources, TextureManager textureManager, int resourceId) {
-		super(resources, textureManager, resourceId);
+	public LoaderAWD(Resources resources, int resourceId) {
+		super(resources, resourceId);
 		init();
 	}
 
-	public LoaderAWD(RajawaliRenderer renderer, String fileOnSDCard) {
-		super(renderer, fileOnSDCard);
+	public LoaderAWD(String fileOnSDCard) {
+		super(fileOnSDCard);
 		init();
+	}
+
+	public LoaderAWD(AssetManager assets, String fileOnAssets) {
+		super(assets, fileOnAssets);
 	}
 
 	protected void init() {
@@ -154,9 +157,7 @@ public class LoaderAWD extends AMeshLoader {
 	}
 
 	@Override
-	public AMeshLoader parse() throws ParsingException {
-		super.parse();
-
+	protected void parse(InputStream is) throws ParsingException {
 		onRegisterBlockClasses(blockParserClassesMap);
 
 		long startTime = SystemClock.elapsedRealtime();
@@ -165,7 +166,7 @@ public class LoaderAWD extends AMeshLoader {
 		// TODO Compare parsing speeds at different buffer sizes.
 		final AWDLittleEndianDataInputStream dis;
 		try {
-			dis = getLittleEndianInputStream(8192);
+			dis = new AWDLittleEndianDataInputStream(new BufferedInputStream(is, 8192));
 		} catch (Exception e) {
 			throw new ParsingException(e);
 		}
@@ -301,7 +302,6 @@ public class LoaderAWD extends AMeshLoader {
 
 		RajLog.d("Finished Parsing in " + (SystemClock.elapsedRealtime() - startTime));
 
-		return this;
 	}
 
 	/**
@@ -324,11 +324,6 @@ public class LoaderAWD extends AMeshLoader {
 			mRootObject.addChild(baseObjects.get(i));
 
 		return mRootObject;
-	}
-
-	@Override
-	protected AWDLittleEndianDataInputStream getLittleEndianInputStream(int size) throws FileNotFoundException {
-		return new AWDLittleEndianDataInputStream(getBufferedInputStream(size));
 	}
 
 	/**
