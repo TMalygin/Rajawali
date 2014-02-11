@@ -107,7 +107,8 @@ public abstract class ALoader implements ILoader {
 		switch (mType) {
 		case ASSETS:
 			// TODO: getParent!!
-			return mAssetFileName;
+			int lastPos = mAssetFileName.lastIndexOf(File.separator);
+			return lastPos == -1 ? "" : mAssetFileName.substring(0, lastPos);
 		case SDCARD:
 			if (mFile == null) {
 				mFile = new File(Environment.getExternalStorageDirectory(), mFileOnSDCard);

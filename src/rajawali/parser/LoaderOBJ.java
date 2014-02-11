@@ -111,6 +111,7 @@ import android.util.Log;
  * 
  * 
  * 
+ * 
  * {
  * 	&#064;code
  * 	ObjParser objParser = new ObjParser(mContext.getResources(), mTextureManager, R.raw.myobject_obj);
@@ -545,7 +546,7 @@ public class LoaderOBJ extends AMeshLoader {
 				switch (loaderType) {
 				case SDCARD:
 					String filePath = getParentFolder() + File.separatorChar + getOnlyFileName(matDef.diffuseTexture);
-					mat.addTexture(new Texture(getOnlyFileName(matDef.diffuseTexture), BitmapFactory
+					mat.addTexture(new Texture(getFileNameWithoutExtension(matDef.diffuseTexture), BitmapFactory
 							.decodeFile(filePath)));
 					break;
 				case RAW:
@@ -556,7 +557,7 @@ public class LoaderOBJ extends AMeshLoader {
 				case ASSETS:
 					String assetsFilepath = getParentFolder() + File.separatorChar
 							+ getOnlyFileName(matDef.diffuseTexture);
-					mat.addTexture(new Texture(getOnlyFileName(matDef.diffuseTexture), BitmapFactory
+					mat.addTexture(new Texture(getFileNameWithoutExtension(matDef.diffuseTexture), BitmapFactory
 							.decodeStream(assets.open(assetsFilepath))));
 					break;
 				}
@@ -567,7 +568,7 @@ public class LoaderOBJ extends AMeshLoader {
 				switch (loaderType) {
 				case SDCARD:
 					String filePath = getParentFolder() + File.separatorChar + getOnlyFileName(matDef.bumpTexture);
-					mat.addTexture(new NormalMapTexture(getOnlyFileName(matDef.bumpTexture), BitmapFactory
+					mat.addTexture(new NormalMapTexture(getFileNameWithoutExtension(matDef.bumpTexture), BitmapFactory
 							.decodeFile(filePath)));
 					break;
 				case RAW:
@@ -578,7 +579,7 @@ public class LoaderOBJ extends AMeshLoader {
 				case ASSETS:
 					String assetsFilePath = getParentFolder() + File.separatorChar
 							+ getOnlyFileName(matDef.bumpTexture);
-					mat.addTexture(new NormalMapTexture(getOnlyFileName(matDef.bumpTexture), BitmapFactory
+					mat.addTexture(new NormalMapTexture(getFileNameWithoutExtension(matDef.bumpTexture), BitmapFactory
 							.decodeStream(assets.open(assetsFilePath))));
 					break;
 				}
@@ -590,7 +591,7 @@ public class LoaderOBJ extends AMeshLoader {
 				case SDCARD:
 					String filePath = getParentFolder() + File.separatorChar
 							+ getOnlyFileName(matDef.specularColorTexture);
-					mat.addTexture(new SpecularMapTexture(getOnlyFileName(matDef.specularColorTexture), BitmapFactory
+					mat.addTexture(new SpecularMapTexture(getFileNameWithoutExtension(matDef.specularColorTexture), BitmapFactory
 							.decodeFile(filePath)));
 					break;
 				case RAW:
@@ -601,7 +602,7 @@ public class LoaderOBJ extends AMeshLoader {
 				case ASSETS:
 					String assetsFilePath = getParentFolder() + File.separatorChar
 							+ getOnlyFileName(matDef.specularColorTexture);
-					mat.addTexture(new SpecularMapTexture(getOnlyFileName(matDef.specularColorTexture), BitmapFactory
+					mat.addTexture(new SpecularMapTexture(getFileNameWithoutExtension(matDef.specularColorTexture), BitmapFactory
 							.decodeStream(assets.open(assetsFilePath))));
 					break;
 				}
