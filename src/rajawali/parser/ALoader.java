@@ -106,7 +106,6 @@ public abstract class ALoader implements ILoader {
 	public String getParentFolder() {
 		switch (mType) {
 		case ASSETS:
-			// TODO: getParent!!
 			int lastPos = mAssetFileName.lastIndexOf(File.separator);
 			return lastPos == -1 ? "" : mAssetFileName.substring(0, lastPos);
 		case SDCARD:

@@ -112,6 +112,7 @@ import android.util.Log;
  * 
  * 
  * 
+ * 
  * {
  * 	&#064;code
  * 	ObjParser objParser = new ObjParser(mContext.getResources(), mTextureManager, R.raw.myobject_obj);
@@ -288,7 +289,12 @@ public class LoaderOBJ extends AMeshLoader {
 				} else if (type.equals(MATERIAL_LIB)) {
 					if (!parts.hasMoreTokens())
 						continue;
-					String materialLibPath = parts.nextToken().replace(".", "_");
+					String materialLibPath = parts.nextToken();
+					
+					if (getType() == Type.RAW) {
+						// it's needed only for raw
+						materialLibPath = materialLibPath.replace(".", "_");
+					}
 					Log.d(Wallpaper.TAG, "Found Material Lib: " + materialLibPath);
 					matLib.parse(materialLibPath);
 				} else if (type.equals(USE_MATERIAL)) {
@@ -591,8 +597,9 @@ public class LoaderOBJ extends AMeshLoader {
 				case SDCARD:
 					String filePath = getParentFolder() + File.separatorChar
 							+ getOnlyFileName(matDef.specularColorTexture);
-					mat.addTexture(new SpecularMapTexture(getFileNameWithoutExtension(matDef.specularColorTexture), BitmapFactory
-							.decodeFile(filePath)));
+					mat.addTexture(new SpecularMapTexture(getFileNameWithoutExtension(matDef.specularColorTexture),
+							BitmapFactory
+									.decodeFile(filePath)));
 					break;
 				case RAW:
 					int identifier = mResources.getIdentifier(getFileNameWithoutExtension(matDef.specularColorTexture),
@@ -602,8 +609,9 @@ public class LoaderOBJ extends AMeshLoader {
 				case ASSETS:
 					String assetsFilePath = getParentFolder() + File.separatorChar
 							+ getOnlyFileName(matDef.specularColorTexture);
-					mat.addTexture(new SpecularMapTexture(getFileNameWithoutExtension(matDef.specularColorTexture), BitmapFactory
-							.decodeStream(assets.open(assetsFilePath))));
+					mat.addTexture(new SpecularMapTexture(getFileNameWithoutExtension(matDef.specularColorTexture),
+							BitmapFactory
+									.decodeStream(assets.open(assetsFilePath))));
 					break;
 				}
 
